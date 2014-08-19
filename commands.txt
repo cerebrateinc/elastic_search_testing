@@ -1,0 +1,114 @@
+// Load data into the Elasticsearch server
+curl -XPUT localhost:9200/_river/cd/_meta -d '
+{
+"type" : "csv",
+"csv_file" : {
+"folder" : "C:\Users\VeNuSs\Desktop\CSV",
+"first_line_is_header":"true"
+} 
+}'
+
+
+// SELECT * FROM cj WHERE customer_ID = "10001888"
+// Can use Prefix or "range":{"position":{"from":3,"to":4  instead of term
+// Can use terms in query and can do multiple values.
+// Eg: "terms": {"color": ["red", "blue", "white"],"minimum_should_match":2}
+
+curl -XGET 'localhost:9200/cj/_search?pretty=true' -d '{
+ "query" : {
+  "term" : { "customer_ID" : "10001888"}
+ }
+}'
+
+// ElasticSearch does not provide the join as in SQL, but it provides similar alternatives. Some of them are as follows:
+    // Child/parent queries
+    // Nested queries
+    // Terms filter with external document term fetching
+
+
+curl -XGET 'localhost:9200/cj/_search?pretty=true' -d '{
+    "query": {
+        "filtered": {
+            "filter": {
+                "term": {"customer_ID" : "10001888"}
+            },
+            "query": {
+                "match_all": {}
+            }
+        }
+    }
+}'
+
+// SELECT customer_ID,shopping_pt, A,B FROM cj WHERE customer_ID = "10001888"
+// ORDER BY shopping_pt
+curl -XGET 'localhost:9200/cj/_search?pretty=true' -d '{
+ "fields" : [ "customer_ID","shopping_pt", "A","B"],
+ "query" : {
+  "term" : { "customer_ID" : "10001888"}
+ },
+"sort": { "shopping_pt": { "order": "asc" }}
+}'
+
+// SELECT customer_ID,shopping_pt, A,B FROM cj WHERE customer_ID = "10001888"
+// ORDER BY shopping_pt and adds tags to the output
+curl -XGET 'localhost:9200/cj/_search?pretty=true' -d '{
+ "fields" : [ "customer_ID","shopping_pt", "A","B"],
+ "query" : {
+  "term" : { "customer_ID" : "10001888"}
+ },
+"sort": { "shopping_pt": { "order": "asc" }},
+"highlight" : {
+        "pre_tags" : ["Pre-Text "],
+        "post_tags" : [" After"],
+        "fields" : {
+            "customer_ID" : {}
+        }
+    }
+}'
+
+curl -XGET 'localhost:9200/cj/_search?pretty=true' -d '{
+ "fields" : [ "customer_ID","shopping_pt", "A","B"],
+ "query" : {
+  "term" : { "customer_ID" : "10001888"}
+ },
+"highlight" : {
+	"order": "shopping_pt",
+        "pre_tags" : ["Pre-Text "],
+        "post_tags" : [" After"],
+        "fields" : {
+            "customer_ID" : {}
+        }
+    }
+}'
+
+curl -XGET 'localhost:9200/cj/_search?pretty=true' -d '{
+ "fields" : [ "customer_ID","shopping_pt", "A","B"],
+ "query" : {
+  "term" : { "customer_ID" : "10001888"}
+ },
+"aggs" : {"intraday_return" : { "avg" : { "field" : "shopping_pt" } } }
+}'
+
+curl -XGET 'localhost:9200/cj/_search?pretty=true' -d '{
+ "fields" : [ "customer_ID","shopping_pt", "A","B"],
+ "query" : {
+  "term" : { "customer_ID" : "10001888"}
+ },
+"facets" : {"facetName" : {"statistical" : {
+    "field" : "A"
+   }
+  }
+ }
+}'
+
+// changing field type
+curl -XPUT 'http://localhost:9200/_river/cj/_mapping' -d '
+{
+    "cj" : {
+        "properties" : {
+            "A" : {"type" : "number", "store" : "yes"}
+        }
+    }
+}'
+
+
